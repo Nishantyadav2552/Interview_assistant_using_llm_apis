@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview</title>
+    <style>
+        :root {
+            --primary: #3498db;         /* Trustworthy blue */
+            --secondary: #00bcd4;       /* Futuristic cyan */
+            --dark: #2c3e50;            /* Deep space blue */
+            --light: #ecf0f1;           /* Clean lab white */
+            --accent: #7986cb;          /* Scientific purple */
+            --background: #f5f7fa;      /* Sterile background */
+            --glow-color1: rgba(52, 152, 219, 0.7);  /* Primary glow */
+            --glow-color2: rgba(0, 188, 212, 0.3);   /* Secondary glow */
+            --glow-intensity: 0.5;
+            --glow-size: 10px;
+            --glow-spread: 15px;        /* Added for more control */
+            --glow-transition: 0.2s;     /* Added for smoother transitions */
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%233498db' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E"), linear-gradient(135deg, var(--background) 0%, #e2ebf0 100%);
+            color: var(--dark);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+
+        #question {
+            background-color: white;
+            padding: 25px;
+            border-left: 5px solid var(--primary);
+            font-size: 1.2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            margin: 30px 0;
+            position: relative;
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+        
+        /* Sound reactive glow */
+        #question.speaking {
+            box-shadow: 0 0 15px 8px var(--glow-color1),
+                       0 0 30px 15px var(--glow-color2);
+            transform: translateZ(0);
+            transition: box-shadow var(--glow-transition), transform var(--glow-transition);
+        }
+        
+        .sound-wave {
+            display: none;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 30px;
+            width: 40px;
+        }
+        
+        #question.speaking .sound-wave {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .sound-wave span {
+            display: inline-block;
+            width: 4px;
+            height: 8px;
+            background-color: var(--primary);
+            border-radius: 3px;
+            transition: height 0.1s ease;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        #start-btn {
+            background: linear-gradient(45deg, var(--primary), #2980b9);
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            display: block;
+            margin: 40px auto;
+            width: 200px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            resize: vertical;
+            transition: border 0.3s ease;
+            font-family: inherit;
+        }
+        
+        textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        #score {
+            font-size: 2rem;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            color: var(--primary);
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h3 {
+            color: var(--dark);
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+        
+        #previous-answers {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        #previous-answers li {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        #previous-answers li:last-child {
+            border-bottom: none;
+        }
+        
+        #interview-container {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+        }
+        
+        #speak {
+            background-color: var(--secondary);
+            box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+        }
+        
+        #speak:hover {
+            box-shadow: 0 7px 20px rgba(0, 188, 212, 0.4);
+        }
+        
+        /* Feedback section styling */
+        #feedback-container {
+            margin-top: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid var(--secondary);
+            transition: all 0.3s ease;
+        }
+
+        #feedback-container h3 {
+            color: var(--secondary);
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+            margin-top: 0;
+            display: inline-block;
+        }
+
+        #feedback-button {
+            background: linear-gradient(45deg, var(--secondary), #03a9f4);
+            margin-top: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+        }
+
+        #feedback-button:hover {
+            box-shadow: 0 7px 20px rgba(0, 188, 212, 0.4);
+        }
+
+        #feedback-content {
+            background: var(--background) !important;
+            padding: 20px !important;
+            border-radius: 10px !important;
+            margin-top: 15px;
+            border-left: 3px solid var(--secondary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        #feedback-content:empty {
+            display: none;
+        }
+
+        #feedback-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #feedback-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #feedback-content::-webkit-scrollbar-thumb {
+            background: var(--secondary);
+            border-radius: 10px;
+        }
+
+        /* Loading animation for feedback */
+        .feedback-loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .feedback-loading span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            margin: 0 5px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .feedback-loading span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .feedback-loading span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* Highlight important points in feedback */
+        .feedback-highlight {
+            background-color: rgba(0, 188, 212, 0.1);
+            border-left: 3px solid var(--secondary);
+            padding: 8px 12px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Feedback sections */
+        .feedback-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feedback-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .feedback-section h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Professional Interview Coach</h1>
+
+    <button id="start-btn" onclick="startInterview()">🎤 Start Interview</button>
+
+    <div id="interview-container" style="display: none;">
+        <p id="question">Click "Start Interview" to begin.
+            <div class="sound-wave">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </p>
+        <textarea id="response" rows="4" placeholder="Type your response here..."></textarea>
+        <button id="submit" onclick="submitResponse()">Submit Answer</button>
+        <button id="speak" onclick="recognizeSpeech()">🎤 Voice Input</button>
+        <h3>Your Previous Answers</h3>
+        <ul id="previous-answers"></ul>
+        <p id="score"></p>
+        
+        <div id="feedback-container">
+            <h3>AI Feedback</h3>
+            <button id="feedback-button" onclick="fetchFeedback()">📝 Get Detailed Feedback</button>
+            <div id="feedback-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Create a simple audio analyzer for visualization
+        let audioContext = null;
+        let analyzer = null;
+        let currentAudio = null;
+        let animationFrame = null;
+        
+        function setupAudioContext() {
+            // Create audio context only once
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyzer = audioContext.createAnalyser();
+                    analyzer.fftSize = 64;
+                } catch (e) {
+                    console.error("Web Audio API not supported:", e);
+                }
+            }
+        }
+        
+        function visualizeAudio() {
+            if (!analyzer) return;
+            
+            const bufferLength = analyzer.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyzer.getByteFrequencyData(dataArray);
+            
+            // Calculate average intensity
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+            }
+            const average = sum / bufferLength;
+            
+            // Scale intensity (0-255) to usable range - increase multiplier for stronger effect
+            const intensity = Math.min(1, average / 100); // Reduced from 128 to 100 for more sensitivity
+            
+            // Update glow effect based on intensity
+            const questionElement = document.getElementById("question");
+            
+            // Dynamic glow size based on intensity - increased max size
+            const minSize = 5;
+            const maxSize = 40; // Increased from 25 to 40
+            const glowSize = minSize + intensity * (maxSize - minSize);
+            
+            // Update box shadow with stronger glow colors and larger spread
+            questionElement.style.boxShadow = `
+                0 0 ${glowSize}px ${glowSize/1.5}px rgba(52, 152, 219, ${0.4 + intensity * 0.6}),
+                0 0 ${glowSize*2.5}px ${glowSize*1.2}px rgba(0, 188, 212, ${0.2 + intensity * 0.4}),
+                0 0 ${glowSize*4}px ${glowSize*1.5}px rgba(52, 152, 219, ${0.1 + intensity * 0.2})
+            `;
+            
+            // Add subtle scale transform for pulsing effect
+            const scaleAmount = 1 + (intensity * 0.02);
+            questionElement.style.transform = `scale(${scaleAmount})`;
+            
+            // Update sound wave visualization
+            const bars = document.querySelectorAll('.sound-wave span');
+            const barCount = bars.length;
+            
+            for (let i = 0; i < barCount; i++) {
+                // Get data from specific frequency range for each bar
+                const index = Math.floor((i / barCount) * bufferLength);
+                const barIntensity = dataArray[index] / 255;
+                const minHeight = 5;
+                const maxHeight = 40; // Increased from 30 to 40
+                const height = minHeight + barIntensity * (maxHeight - minHeight);
+                
+                bars[i].style.height = `${height}px`;
+            }
+            
+            // Continue animation loop
+            if (!currentAudio.paused) {
+                animationFrame = requestAnimationFrame(visualizeAudio);
+            } else {
+                // Stop visualization when audio ends
+                stopVisualization();
+            }
+        }
+        
+        function stopVisualization() {
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+            
+            // Reset glow effect
+            const questionElement = document.getElementById("question");
+            questionElement.classList.remove("speaking");
+            questionElement.style.boxShadow = "";
+            questionElement.style.transform = ""; // Reset transform
+            
+            // Reset sound wave bars
+            const bars = document.querySelectorAll('.sound-wave span');
+            bars.forEach(bar => {
+                bar.style.height = "8px";
+            });
+        }
+        
+        async function startInterview() {
+            document.getElementById("start-btn").style.display = "none";
+            
+            // Set up audio context for visualization
+            setupAudioContext();
+                
+            const response = await fetch("/start_interview");
+            const data = await response.json();
+                
+            document.getElementById("question").innerText = data.question;
+            document.getElementById("interview-container").style.display = "block";
+                
+            // Create sound wave elements
+            const soundWave = document.createElement('div');
+            soundWave.className = 'sound-wave';
+            for (let i = 0; i < 5; i++) {
+                const bar = document.createElement('span');
+                soundWave.appendChild(bar);
+            }
+            document.getElementById("question").appendChild(soundWave);
+                
+            speakText(data.question);
+        }
+
+        async function getQuestion() {
+            const response = await fetch("/get_question");
+            const data = await response.json();
+
+            if (data.message) {
+                document.getElementById("question").innerText = "🎉 " + data.message;
+                document.getElementById("score").innerText = "Final Score: " + data.score + "/10";
+                document.getElementById("score").style.display = "block";
+                document.getElementById("response").disabled = true;
+                document.getElementById("submit").disabled = true;
+                document.getElementById("speak").disabled = true;
+            } else {
+                document.getElementById("question").innerText = data.question;
+                
+                // Recreate sound wave elements (to avoid text node issues)
+                const questionElement = document.getElementById("question");
+                let soundWave = questionElement.querySelector('.sound-wave');
+                if (!soundWave) {
+                    soundWave = document.createElement('div');
+                    soundWave.className = 'sound-wave';
+                    for (let i = 0; i < 5; i++) {
+                        const bar = document.createElement('span');
+                        soundWave.appendChild(bar);
+                    }
+                    questionElement.appendChild(soundWave);
+                }
+                
+                speakText(data.question);
+            }
+        }
+
+        async function submitResponse() {
+            let userResponse = document.getElementById("response").value.trim();
+            if (!userResponse) return;
+
+            document.getElementById("submit").disabled = true;
+
+            await fetch("/submit_response", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ response: userResponse })
+            });
+
+            document.getElementById("previous-answers").innerHTML += `<li>${userResponse}</li>`;
+            document.getElementById("response").value = "";
+
+            await getQuestion();
+            document.getElementById("submit").disabled = false;
+        }
+
+        async function speakText(text) {
+            try {
+                // First, activate the speaking class to show we're about to speak
+                const questionElement = document.getElementById("question");
+                questionElement.classList.add("speaking");
+                
+                const response = await fetch("/text_to_speech", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const result = await response.json();
+
+                if (result.audio_url) {
+                    // Create new audio element
+                    if (currentAudio) {
+                        currentAudio.pause();
+                        currentAudio = null;
+                    }
+                    
+                    // Add timestamp to force the browser to fetch a new file
+                    const audio = new Audio(result.audio_url + "?t=" + new Date().getTime());
+                    currentAudio = audio;
+                    
+                    console.log("✅ Playing Audio:", audio.src);
+                    
+                    // Only set up analyzer if we have Web Audio API support
+                    if (audioContext && analyzer) {
+                        // Connect the audio to the analyzer
+                        audio.addEventListener('canplaythrough', function() {
+                            try {
+                                const source = audioContext.createMediaElementSource(audio);
+                                source.connect(analyzer);
+                                analyzer.connect(audioContext.destination);
+                                
+                                // Start visualization
+                                animationFrame = requestAnimationFrame(visualizeAudio);
+                                
+                                // Play the audio
+                                audio.play();
+                            } catch (e) {
+                                console.error("Error connecting audio to analyzer:", e);
+                                // Fallback: just play audio without visualization
+                                audio.play();
+                            }
+                        }, { once: true });
+                        
+                        // When audio ends, stop visualization
+                        audio.addEventListener('ended', function() {
+                            stopVisualization();
+                        });
+                    } else {
+                        // No Web Audio API support, just play the audio
+                        audio.play();
+                        
+                        // Use simple class-based animation instead
+                        questionElement.classList.add("speaking");
+                        
+                        audio.addEventListener('ended', function() {
+                            questionElement.classList.remove("speaking");
+                        });
+                    }
+                } else {
+                    console.error("❌ TTS Error:", result.error);
+                    questionElement.classList.remove("speaking");
+                }
+            } catch (error) {
+                console.error("❌ Error in TTS request:", error);
+                document.getElementById("question").classList.remove("speaking");
+            }
+        }
+
+        async function recognizeSpeech() {
+            const response = await fetch("/speech_to_text", { method: "POST" });
+            const data = await response.json();
+
+            if (data.text && data.text !== "No speech recognized.") {
+                document.getElementById("response").value = data.text;
+            } else {
+                document.getElementById("response").placeholder = "Try speaking again...";
+            }
+        }
+        
+        async function fetchFeedback() {
+            const feedbackContent = document.getElementById("feedback-content");
+            
+            // Show loading animation
+            feedbackContent.innerHTML = `
+                <div class="feedback-loading">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>`;
+            
+            try {
+                const response = await fetch("/get_feedback");
+                const data = await response.json();
+
+                if (data.feedback) {
+                    // Process feedback to add structure and highlights
+                    let processedFeedback = processFeedback(data.feedback);
+                    feedbackContent.innerHTML = processedFeedback;
+                } else {
+                    feedbackContent.innerHTML = `
+                        <div class="feedback-section">
+                            <h4>⚠️ No feedback available</h4>
+                            <p>Please submit at least one answer to receive feedback.</p>
+                        </div>`;
+                }
+            } catch (error) {
+                feedbackContent.innerHTML = `
+                    <div class="feedback-section">
+                        <h4>❌ Error retrieving feedback</h4>
+                        <p>Please try again later.</p>
+                    </div>`;
+            }
+        }
+
+        // Function to process feedback text and add structure
+        function processFeedback(feedbackText) {
+            // Split feedback into sections (this is a simplified example)
+            // In a real implementation, you might want to parse specific sections from the AI response
+            
+            let sections = feedbackText.split('\n\n');
+            let result = '';
+            
+            sections.forEach((section, index) => {
+                // Highlight key points (e.g., lines starting with specific phrases)
+                if (section.includes("Strengths:") || section.includes("Improvements:") || 
+                    section.includes("Key points:") || section.includes("Summary:")) {
+                    
+                    let title = section.split(':')[0];
+                    let content = section.substring(section.indexOf(':') + 1);
+                    
+                    result += `<div class="feedback-section">
+                        <h4>${title}:</h4>
+                        <div class="feedback-highlight">${content}</div>
+                    </div>`;
+                } else {
+                    result += `<div class="feedback-section">${section}</div>`;
+                }
+            });
+            
+            return result;
+        }
+    </script>
+</body>
+</html>

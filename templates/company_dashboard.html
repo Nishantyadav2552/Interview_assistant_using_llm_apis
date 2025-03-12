@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Dashboard</title>
+</head>
+<style>
+    * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: #333;
+  padding: 40px 20px;
+}
+
+h1 {
+  color: white;
+  margin-bottom: 20px;
+  font-size: 2rem;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+button[onclick="window.location.href='/logout'"] {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s, transform 0.2s;
+}
+
+button[onclick="window.location.href='/logout'"]:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+h3 {
+  color: white;
+  margin: 30px auto 15px;
+  font-size: 1.3rem;
+  max-width: 800px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+form {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+  max-width: 800px;
+  margin: 0 auto 30px;
+  display: flex;
+  gap: 15px;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border 0.3s, box-shadow 0.3s;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #764ba2;
+  box-shadow: 0 0 8px rgba(118, 75, 162, 0.4);
+}
+
+form button {
+  background: #764ba2;
+  color: white;
+  border: none;
+  padding: 0 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.3s, transform 0.2s;
+}
+
+form button:hover {
+  background: #667eea;
+  transform: translateY(-2px);
+}
+
+form button:active {
+  transform: translateY(0);
+}
+
+ul {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+  padding: 25px 25px 25px 45px;
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 100px;
+}
+
+li {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  line-height: 1.5;
+}
+
+li:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.5rem;
+    margin-top: 40px;
+    text-align: center;
+  }
+  
+  button[onclick="window.location.href='/logout'"] {
+    position: static;
+    display: block;
+    margin: 10px auto 30px;
+    width: 100px;
+  }
+  
+  form {
+    flex-direction: column;
+  }
+  
+  form button {
+    width: 100%;
+    padding: 12px;
+  }
+}
+</style>
+<body>
+    <h1>Welcome, {{ session["user"] }}! Manage Your Interview Questions</h1>
+    <button onclick="window.location.href='/logout'">Logout</button>
+
+    <h3>Add a Custom Interview Question:</h3>
+    <form method="POST">
+        <input type="text" name="question" required>
+        <button type="submit">Add Question</button>
+    </form>
+
+    <h3>Current Questions:</h3>
+    <ul>
+        {% for question in custom_questions %}
+            <li>{{ question }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
