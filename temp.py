@@ -45,7 +45,7 @@ if not os.path.exists(app.config["UPLOAD_FOLDER"]):
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Expires in 30 mins
 
 # 🔗 Connect Flask to MongoDB
-MONGO_URI = "mongodb+srv://123103054:TfUOHuLbpP5aONS6@cluster0.cssez.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = "mongodb+srv://123103054:TfUOHuLbpP5aONS6@cluster0.cssez.mongodb.net/interview_ai?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true"
 mongo = pymongo.MongoClient(MONGO_URI)
 db = mongo["interview_ai"]  # Database name
 
