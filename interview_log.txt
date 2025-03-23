@@ -1,19 +1,8 @@
-Q: who are you?
-A: I'm Nishant from NIT Kurukshetra.
+Q: Given a sorted array, how would you search for an element efficiently?
 
-Q: Okay, Nishant, NIT Kurukshetra, nice! So, what did you study there?
-A: Uh, I currently study in Btech in Information technology.
+A: stop
 
-Q: where do you study?
-Q: give your intro.
-Q: give your intro.
-Q: who are you?
-A: I'm Nishant from Chetra, Haryana.
+Q: Oh really? Why's that?
 
-Q: Okay, Nishant, Chetra sounds interesting, what's it like growing up there?
-Q: kon hai tu?
-A: Your daddy.
-
-Q: Okay, that's... unexpected. How about: "Seriously, who told you that?"
-A: I do not know.
+A: top it now
 

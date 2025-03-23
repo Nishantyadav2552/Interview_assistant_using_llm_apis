@@ -4,169 +4,613 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Company Dashboard</title>
-</head>
-<style>
-    * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+:root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #e0e7ff;
+    --secondary: #8b5cf6;
+    --background: #f3f4f6;
+    --card-bg: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-light: #9ca3af;
+    --border: #e5e7eb;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --success: #10b981;
+    --radius: 8px;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --transition: all 0.2s ease;
 }
 
 body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  color: #333;
-  padding: 40px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    min-height: 100vh;
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+    font-size: 16px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+}
+
+h1, h2, h3 {
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    font-weight: 700;
 }
 
 h1 {
-  color: white;
-  margin-bottom: 20px;
-  font-size: 2rem;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
 }
 
-button[onclick="window.location.href='/logout'"] {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  padding: 8px 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.3s, transform 0.2s;
-}
-
-button[onclick="window.location.href='/logout'"]:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
+h2 {
+    font-size: 1.8rem;
+    margin-top: 2rem;
 }
 
 h3 {
-  color: white;
-  margin: 30px auto 15px;
-  font-size: 1.3rem;
-  max-width: 800px;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+    font-size: 1.4rem;
+    margin-top: 1.5rem;
 }
 
-form {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
-  max-width: 800px;
-  margin: 0 auto 30px;
-  display: flex;
-  gap: 15px;
+label {
+    display: block;
+    color: white;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.job-title-wrapper {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
 }
 
 input[type="text"] {
-  flex: 1;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 16px;
-  transition: border 0.3s, box-shadow 0.3s;
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    box-shadow: var(--shadow);
+    transition: var(--transition);
 }
 
 input[type="text"]:focus {
-  outline: none;
-  border-color: #764ba2;
-  box-shadow: 0 0 8px rgba(118, 75, 162, 0.4);
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
-form button {
-  background: #764ba2;
-  color: white;
-  border: none;
-  padding: 0 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  transition: background 0.3s, transform 0.2s;
+button {
+    background-color: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
 }
 
-form button:hover {
-  background: #667eea;
-  transform: translateY(-2px);
+button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
 }
 
-form button:active {
-  transform: translateY(0);
+button:active {
+    transform: translateY(0);
+}
+
+/* Improved card styling */
+.card {
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+}
+
+/* Improved generated questions container */
+#generated_questions {
+    max-height: 350px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    padding-right: 0.5rem;
+}
+
+/* Custom scrollbar for generated questions */
+#generated_questions::-webkit-scrollbar {
+    width: 6px;
+}
+
+#generated_questions::-webkit-scrollbar-track {
+    background: var(--background);
+    border-radius: 10px;
+}
+
+#generated_questions::-webkit-scrollbar-thumb {
+    background: var(--primary-light);
+    border-radius: 10px;
+}
+
+#generated_questions::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+/* Improved question wrapper styling */
+.question-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+    background-color: white;
+}
+
+.question-wrapper:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.question-wrapper:last-child {
+    margin-bottom: 0;
+}
+
+/* Improved checkbox styling */
+.checkbox {
+    transform: scale(1.2);
+    margin-right: 1rem;
+    accent-color: var(--primary);
+    cursor: pointer;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+/* Style for labels inside question wrapper */
+.question-wrapper label {
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 400;
+    flex: 1;
+}
+
+/* Selected question styling */
+.checkbox:checked + label {
+    font-weight: 500;
+    color: var(--primary);
+}
+
+.btn-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Improved select all button styling */
+#select_all_btn {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+#select_all_btn:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+.custom-question {
+    margin-bottom: 2rem;
+}
+
+.custom-question input {
+    width: 100%;
+    margin-bottom: 1rem;
 }
 
 ul {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 10px;
-  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
-  padding: 25px 25px 25px 45px;
-  max-width: 800px;
-  margin: 0 auto;
-  min-height: 100px;
+    list-style: none;
+    padding: 0;
 }
 
 li {
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  line-height: 1.5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    transition: var(--transition);
+}
+
+li:hover {
+    background-color: var(--background);
 }
 
 li:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
+    border-bottom: none;
 }
 
-@media (max-width: 600px) {
-  h1 {
-    font-size: 1.5rem;
-    margin-top: 40px;
+.delete-btn {
+    background: transparent;
+    color: var(--text-light);
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+.delete-btn:hover {
+    color: var(--danger);
+    background-color: rgba(239, 68, 68, 0.1);
+    transform: none;
+}
+
+.logout-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: transparent;
+    border: 2px solid white;
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    box-shadow: none;
+}
+
+.logout-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Loading indicator for when questions are being generated */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    animation: pulse 1.5s infinite;
+}
+
+/* Empty state styling */
+.empty-state {
     text-align: center;
-  }
-  
-  button[onclick="window.location.href='/logout'"] {
-    position: static;
-    display: block;
-    margin: 10px auto 30px;
-    width: 100px;
-  }
-  
-  form {
-    flex-direction: column;
-  }
-  
-  form button {
-    width: 100%;
-    padding: 12px;
-  }
+    padding: 2rem;
+    color: var(--text-light);
+    font-style: italic;
 }
-</style>
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .job-title-wrapper {
+        flex-direction: column;
+    }
+    
+    button {
+        width: 100%;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    .card {
+        padding: 1rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    #generated_questions {
+        max-height: 300px;
+    }
+}
+.company-id-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f3f4f6;
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 400px;
+}
+
+.company-id-container input {
+    flex: 1;
+    padding: 8px;
+    font-size: 16px;
+    border: none;
+    background: none;
+    color: #333;
+}
+
+.company-id-container button {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.company-id-container button:hover {
+    background: #4338ca;
+}
+
+    </style>
+</head>
 <body>
-    <h1>Welcome, {{ session["user"] }}! Manage Your Interview Questions</h1>
-    <button onclick="window.location.href='/logout'">Logout</button>
+  <div class="container"> 
+    <h1>Company Dashboard</h1>
+    <button class="logout-btn" onclick="window.location.href='/logout'">Logout</button>
 
-    <h3>Add a Custom Interview Question:</h3>
-    <form method="POST">
-        <input type="text" name="question" required>
-        <button type="submit">Add Question</button>
-    </form>
+    <h2>Your Company User ID</h2>
+    <div class="company-id-container">
+        <input type="text" id="company_user_id" readonly>
+        <button onclick="copyUserID()">Copy</button>
+    </div>
 
-    <h3>Current Questions:</h3>
-    <ul>
-        {% for question in custom_questions %}
-            <li>{{ question }}</li>
-        {% endfor %}
-    </ul>
+    <!-- Job Title Input -->
+    <label for="job_title">Enter Job Title:</label>
+    <div class="job-title-wrapper">
+        <input type="text" id="job_title" name="job_title" placeholder="e.g. Software Engineer">
+        <input type="text" id="min_exp" name="min_exp" placeholder="e.g. 2 years">
+        <input type="number" id="num_questions" name="num_questions" placeholder="Number of Questions" min="1" max="100" value="10">
+
+        <select id="difficulty">
+            <option value="Easy">Easy</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Hard">Hard</option>
+        </select>
+        <button onclick="generateQuestions()">Generate Questions</button>
+    </div>
+    
+    <!-- Display AI-Generated Questions with Checkboxes -->
+    <h3>AI-Generated Questions:</h3>
+    <div class="card">
+      <form>
+        <div id="generated_questions"></div>
+      </form>
+      <div class="btn-group">
+        <button onclick="toggleSelectAll()" id="select_all_btn">Select All</button>
+        <button onclick="addSelectedQuestions()">Add Selected</button>
+      </div>
+    </div>
+
+    <!-- Custom Question Addition -->
+    <div class="custom-question">
+      <h3>Or, Add Your Own Question:</h3>
+      <input type="text" id="custom_question" placeholder="Type your question here...">
+      <button onclick="addCustomQuestion()">Add Question</button>
+    </div>
+
+    <!-- Existing Questions -->
+    <h2>Existing Questions:</h2>
+    <div class="card">
+      <ul id="existing_questions"></ul>
+    </div>
+</div>
+
+<script>
+    // ✅ Generate AI-Based Questions
+    // Update the generateQuestions function to show loading state
+async function generateQuestions() {
+    let jobTitle = document.getElementById("job_title").value.trim();
+    let difficulty = document.getElementById("difficulty").value;
+    let minExp = document.getElementById("min_exp").value.trim();
+    let numQuestions = parseInt(document.getElementById("num_questions").value.trim());
+
+    if (!jobTitle) {
+        alert("⚠️ Please enter a job title!");
+        return;
+    }
+
+    if (isNaN(numQuestions) || numQuestions < 1 || numQuestions > 100) {
+        alert("⚠️ Please enter a valid number of questions (1-100)!");
+        return;
+    }
+
+    let questionsContainer = document.getElementById("generated_questions");
+    questionsContainer.innerHTML = '<div class="loading">Generating questions...</div>';
+
+    try {
+        let response = await fetch("/generate_questions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                job_title: jobTitle, 
+                difficulty: difficulty, 
+                min_exp: minExp, 
+                num_questions: numQuestions 
+            })
+        });
+
+        let data = await response.json();
+        questionsContainer.innerHTML = "";
+
+        if (data.questions && data.questions.length > 0) {
+            data.questions.forEach((question, index) => {
+                let div = document.createElement("div");
+                div.className = "question-wrapper";
+                div.innerHTML = `
+                    <input type="checkbox" class="checkbox" id="question_${index}" value="${question}">
+                    <label for="question_${index}">${question}</label>
+                `;
+                questionsContainer.appendChild(div);
+            });
+        } else {
+            questionsContainer.innerHTML = '<div class="empty-state">No questions generated. Try a different job title.</div>';
+        }
+
+        // Reset Select All button
+        document.getElementById("select_all_btn").innerText = "Select All";
+    } catch (error) {
+        questionsContainer.innerHTML = '<div class="empty-state">Error generating questions. Please try again.</div>';
+    }
+}
+
+// Add this function to initialize empty state when page loads
+function initGeneratedQuestions() {
+    let questionsContainer = document.getElementById("generated_questions");
+    questionsContainer.innerHTML = '<div class="empty-state">Enter a job title and click "Generate Questions" to get started.</div>';
+}
+
+
+    // ✅ Toggle Select All / Deselect All
+    function toggleSelectAll() {
+        let checkboxes = document.querySelectorAll('.checkbox');
+        let allSelected = [...checkboxes].every(checkbox => checkbox.checked);
+
+        checkboxes.forEach(checkbox => checkbox.checked = !allSelected);
+        document.getElementById("select_all_btn").innerText = allSelected ? "Select All" : "Deselect All";
+    }
+
+    // ✅ Add Selected Questions to Database & UI
+    function addSelectedQuestions() {
+        let checkboxes = document.querySelectorAll('.checkbox:checked');
+        let existingQuestions = document.getElementById("existing_questions");
+
+        checkboxes.forEach((checkbox) => {
+            let li = document.createElement("li");
+            li.innerHTML = `${checkbox.value} <button onclick="deleteQuestion('${checkbox.value}', this)" class="delete-btn">❌</button>`;
+            existingQuestions.appendChild(li);
+
+            // Save question to backend
+            saveQuestion(checkbox.value);
+        });
+    }
+
+    // ✅ Add Custom Question to Database & UI
+    function addCustomQuestion() {
+        let customQuestion = document.getElementById("custom_question").value.trim();
+        if (!customQuestion) return;
+
+        let existingQuestions = document.getElementById("existing_questions");
+        let li = document.createElement("li");
+        li.innerHTML = `${customQuestion} <button onclick="deleteQuestion('${customQuestion}', this)" class="delete-btn">❌</button>`;
+        existingQuestions.appendChild(li);
+
+        // Save question to backend
+        saveQuestion(customQuestion);
+        document.getElementById("custom_question").value = "";
+    }
+
+    // ✅ Delete a Question from UI & Database
+    async function deleteQuestion(questionText, element) {
+        let response = await fetch("/delete_question", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: questionText })
+        });
+
+        let data = await response.json();
+        if (data.success) {
+            element.parentNode.remove(); // Remove question from UI
+        } else {
+            alert("Error deleting question!");
+        }
+    }
+
+    // ✅ Save Question to Database
+    async function saveQuestion(questionText) {
+        let response = await fetch("/save_question", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: questionText })
+        });
+
+        let data = await response.json();
+        if (!data.success) {
+            alert("Error saving question!");
+        }
+    }
+
+    // ✅ Load Existing Questions on Page Load
+    async function loadExistingQuestions() {
+        let response = await fetch("/get_existing_questions");
+        let data = await response.json();
+
+        if (data.questions) {
+            let existingQuestions = document.getElementById("existing_questions");
+            existingQuestions.innerHTML = "";
+
+            data.questions.forEach((question) => {
+                let li = document.createElement("li");
+                li.innerHTML = `${question} <button onclick="deleteQuestion('${question}', this)" class="delete-btn">❌</button>`;
+                existingQuestions.appendChild(li);
+            });
+        }
+    }
+    async function fetchCompanyUserID() {
+    let response = await fetch("/get_company_user_id");
+    let data = await response.json();
+
+    if (data.user_id) {
+        document.getElementById("company_user_id").value = data.user_id;
+    } else {
+        document.getElementById("company_user_id").value = "Error fetching ID";
+    }
+}
+
+// ✅ Copy User ID to Clipboard
+function copyUserID() {
+    let inputField = document.getElementById("company_user_id");
+    inputField.select();
+    inputField.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand("copy");
+
+    alert("Company User ID copied: " + inputField.value);
+}
+
+// ✅ Load User ID when the page loads
+window.onload = function () {
+    fetchCompanyUserID();
+    loadExistingQuestions();
+    initGeneratedQuestions();
+};
+</script>
 </body>
 </html>
