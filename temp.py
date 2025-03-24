@@ -6,17 +6,85 @@ import random
 import os
 import pymongo
 import bcrypt
-import uuid  # ✅ Import this to generate unique user IDs
-import fitz  # PyMuPDF for extracting text from PDFs
+import uuid 
+import fitz 
 import time
+from flask_socketio import SocketIO, emit
+import base64
+from io import BytesIO
+from PIL import Image
+import cv2
+import numpy as np
+import mediapipe as mp
+
 app = Flask(__name__, template_folder="templates")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = "super_secret_key"
 app.config["UPLOAD_FOLDER"] = "uploads"
 
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh()
+prev_nose_y = None
+nodding_threshold = 0.015
+
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 UPLOAD_FOLDER = "uploads/videos"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+@socketio.on("video_frame")
+def handle_video_frame(data):
+
+    global prev_nose_y
+
+    image_data = data["image"].split(",")[1]
+    img_bytes = base64.b64decode(image_data)
+    np_arr = np.frombuffer(img_bytes, np.uint8)
+    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = face_mesh.process(frame_rgb)
+
+    movement = "Straight"
+    movementx = "Straight"
+    tilt_angle = 0
+    nod_angle = 0
+
+    if results.multi_face_landmarks:
+        face_landmarks = results.multi_face_landmarks[0]
+
+        left_eye = np.array([face_landmarks.landmark[33].x, face_landmarks.landmark[33].y])
+        right_eye = np.array([face_landmarks.landmark[263].x, face_landmarks.landmark[263].y])
+        nose = np.array([face_landmarks.landmark[1].x, face_landmarks.landmark[1].y])
+
+        dx = right_eye[0] - left_eye[0]
+        dy = right_eye[1] - left_eye[1]
+        tilt_angle = np.arctan2(dy, dx) * 180 / np.pi
+
+        if tilt_angle > 5:
+            movement = "Tilted Right"
+        elif tilt_angle < -5:
+            movement = "Tilted Left"
+
+        eye_center_y = (left_eye[1] + right_eye[1]) / 2
+        nod_angle = (nose[1] - eye_center_y) * 100
+
+        if prev_nose_y is not None:
+            diff_y = nose[1] - prev_nose_y
+            if diff_y > nodding_threshold:
+                movementx = "Nodding Down"
+            elif diff_y < -nodding_threshold:
+                movementx = "Nodding Up"
+        prev_nose_y = nose[1]
+
+    # Send detection result back to frontend
+    socketio.emit("head_movement", {
+        "movement": movement,
+        "movementx": movementx,
+        "tilt_angle": round(tilt_angle, 2),
+        "nod_angle": round(nod_angle, 2)
+    })
 
 @app.route("/upload_video", methods=["POST"])
 def upload_video():
@@ -790,5 +858,6 @@ def delete_question():
         return jsonify({"success": False, "error": "Question not found!"})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)
+
 

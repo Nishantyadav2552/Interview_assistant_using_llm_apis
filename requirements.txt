@@ -1,7 +1,11 @@
 Flask
-gunicorn
+Flask-SocketIO
+google-generativeai
+azure-cognitiveservices-speech
 pymongo
 bcrypt
 PyMuPDF
-google-generativeai
-azure-cognitiveservices-speech
+opencv-python
+numpy
+mediapipe
+Pillow

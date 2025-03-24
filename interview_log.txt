@@ -1,8 +1,2 @@
-Q: Write a function to reverse a string in place.
-
-A: no
-
-Q: Okay, but just out of curiosity, why not?
-
-A: no
+Q: How do you handle exceptions in your preferred programming language?
 
