@@ -1,8 +1,8 @@
-Q: Given a sorted array, how would you search for an element efficiently?
+Q: Write a function to reverse a string in place.
 
-A: stop
+A: no
 
-Q: Oh really? Why's that?
+Q: Okay, but just out of curiosity, why not?
 
-A: top it now
+A: no
 

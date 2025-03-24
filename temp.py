@@ -9,7 +9,6 @@ import bcrypt
 import uuid  # ✅ Import this to generate unique user IDs
 import fitz  # PyMuPDF for extracting text from PDFs
 import time
-
 app = Flask(__name__, template_folder="templates")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = "super_secret_key"
@@ -228,7 +227,6 @@ def save_question():
 
     # ✅ Check if question already exists for this user
     existing_entry = questions_collection.find_one({"company": username})
-
     if existing_entry:
         if question_text not in existing_entry["questions"]:
             # ✅ Append the new question to the existing list
