@@ -1,2 +1,8 @@
-Q: How do you handle exceptions in your preferred programming language?
+Q: Given an array of integers, find the second largest element.
+
+A: we can achieve this by taking to temporary elements one will be storing the maximum element till now and other will be storing the previous maximum element and then we will traverse through the array and find the maximum element
+
+Q: Okay, so after we've traversed the array, how do we actually use those two temporary elements to, like, *do* the thing we're trying to do?
+
+A: watching this we will compare the max value with a previous Max value and save this current Max value in the max value in the previous saved in the second variable made
 

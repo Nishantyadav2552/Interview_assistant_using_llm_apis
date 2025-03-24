@@ -482,6 +482,12 @@
 
 
     </style>
+    <!-- Add this in <head> -->
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+      
 </head>
 <body>
     <h1>Professional Interview Coach is this </h1>
@@ -547,46 +553,102 @@
             font-size: 16px;
         ">⚠️ Please look straight at the screen</div>
     </div>
-    
-    
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-<script>
-    const socket = io();  // Automatically connects to Flask-SocketIO
-
-    const video = document.getElementById("camera-feed");
-    const canvas = document.getElementById("frame-canvas");
-    const ctx = canvas.getContext("2d");
-
-    function sendFrameToBackend() {
-        if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const imageData = canvas.toDataURL("image/jpeg");
-        socket.emit("video_frame", { image: imageData });  // 📡 Send frame
-    }
-
-    // Call this function every 100ms
-    setInterval(sendFrameToBackend, 100);
-</script>
-<script>
-    socket.on("head_movement", (data) => {
-        const info = `${data.movement} | ${data.movementx} | Tilt: ${data.tilt_angle}° | Nod: ${data.nod_angle}°`;
-        document.getElementById("movement-info").innerText = info;
-
-        const warningBox = document.getElementById("look-straight-warning");
-
-        // Show warning only when face is not straight
-        if (data.movement !== "Straight") {
-            warningBox.style.display = "block";
-        } else {
-            warningBox.style.display = "none";
+    <script>
+        const videoElement = document.getElementById("camera-feed");
+        const canvasElement = document.createElement("canvas");
+        const ctx = canvasElement.getContext("2d");
+      
+        const movementInfo = document.getElementById("movement-info");
+        let prevNoseY = null;
+      
+        function getMovement(landmarks) {
+          const leftEye = landmarks[33];
+          const rightEye = landmarks[263];
+          const nose = landmarks[1];
+      
+          const dx = rightEye.x - leftEye.x;
+          const dy = rightEye.y - leftEye.y;
+          const tiltAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+      
+          let movement = "Straight";
+          if (tiltAngle > 5) movement = "Tilted Right";
+          else if (tiltAngle < -5) movement = "Tilted Left";
+      
+          const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+          const nodAngle = (nose.y - eyeCenterY) * 100;
+          let nod = "Straight";
+      
+          if (prevNoseY !== null) {
+            const diffY = nose.y - prevNoseY;
+            if (diffY > 0.015) nod = "Nodding Down";
+            else if (diffY < -0.015) nod = "Nodding Up";
+          }
+      
+          prevNoseY = nose.y;
+      
+          movementInfo.innerText = `${movement} | ${nod} | Tilt: ${tiltAngle.toFixed(2)}° | Nod: ${nodAngle.toFixed(2)}°`;
+      
+          // Show “Look Straight” message if tilted or nodding
+          if (movement !== "Straight" || nod !== "Straight") {
+            showLookStraightMessage();
+          } else {
+            hideLookStraightMessage();
+          }
         }
-    });
-
-</script>
+      
+        function showLookStraightMessage() {
+          if (!document.getElementById("look-straight-msg")) {
+            const msg = document.createElement("div");
+            msg.id = "look-straight-msg";
+            msg.innerText = "👁️ Please look straight at the screen";
+            msg.style.position = "fixed";
+            msg.style.bottom = "210px";
+            msg.style.right = "10px";
+            msg.style.background = "#fff";
+            msg.style.color = "red";
+            msg.style.padding = "8px 12px";
+            msg.style.borderRadius = "10px";
+            msg.style.fontWeight = "bold";
+            msg.style.boxShadow = "0px 2px 10px rgba(0,0,0,0.2)";
+            document.body.appendChild(msg);
+          }
+        }
+      
+        function hideLookStraightMessage() {
+          const msg = document.getElementById("look-straight-msg");
+          if (msg) msg.remove();
+        }
+      
+        const faceMesh = new FaceMesh({
+          locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+      
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+      
+        faceMesh.onResults(results => {
+          if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const landmarks = results.multiFaceLandmarks[0];
+            getMovement(landmarks);
+          }
+        });
+      
+        const camera = new Camera(videoElement, {
+          onFrame: async () => {
+            await faceMesh.send({ image: videoElement });
+          },
+          width: 640,
+          height: 480
+        });
+      
+        camera.start();
+    </script>
+          
+    
 
     
 <script>
