@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "myinterviewvideos",
+  "private_key_id": "be67096642582423c235b875de946382f2e520c6",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDOptwJKF5Pe5Ig\n3V+lhcriJWGbakOC6EQAgd+0mMG6ifdLnOq3YcW9oMy/G4EaJbEK21E0gJggPwFm\nzXJ+ZyW5zJoMRP9So4hp8kEVhNfgzfQJiec2Jkmcq8NjYt3e+Wr1fufXRaB76cAN\ngTr15gdaVt1gNwyutEKfficLWWJSC4YpKHS0RoC4YTt9/FiO1qyJMCmz7wHHxkga\nGNCGiKY54ntbA0Z2QyYbSL46f3LfJHuQlBIEzqDXq71giXlWF/mxNhJL+irQ0k5n\n8jbslqwSiypqMLLBzq/MmNd4121ULovqgLcSx86FGlJh91r6z36SjJC40jt3gaRo\nhOmY9qFjAgMBAAECggEAIeWg5ienAKamW5m0XLRLiTjUf+e4Vzq+HM8w4LDF5lFH\nLTH6FkaFZwt/SkG6tY1FMyCye0g0q+Vp13EPvMgymf2Dr0uKDgYhFC/WmS8HMirW\nQtJKCMnS/U33aNAI0NBcyRQd92PGZUz8Ybq27yriPeFNwsCE5gtPelX5FZV92TMb\nIghwcHcHdzAR/1bCwh2cjmSjlxuO05CabCckZ2oxjdl8FJXVrMjgmk2hA5u6btiZ\n+aAwXEothCimt9SFrcH0WdXzvuDW3Ptn67cgh3Nz3l1YI2C4CNuDDtWmbMODxMD1\n821IrIyvgxz+5Q9jFsrsaWrp85YxTtmSig6cw9JuUQKBgQDz/HmP7VKnQFbxEeyr\nEVPHeSYWNZJA+4M8XJ+9nOLg3h/C+Bs2ZoHT5qUhLv1UzzFw/QDvfYQiinV+GSRY\nvL/roL7KDdiWV2jBYOBGqh8uWFzg5a+jNhcirI/4FG3QLfHZiZaua8o1NkrtA6dr\n6Z6SaEltAO151qq2KYqw5u5HJwKBgQDY08WmB5ikyYrnzH1cyajWlWqqeufgNKDT\nVKd/cYQG/Rlnm5XyLyD4+G6SfV5xcfFnBE5cSivrvhYHo1XBViZULXbQ3g0/v5wD\n1SGN/U+87xEIG3bVsB2Sf7PHeSHTcFQpGw/xdiO/UdiitjoFfuC8bw2SuiDvzXIq\nH4P9SwhZZQKBgQCnLupxR/Jp7nlkqJ6ePbpFpesGLuEvq+gqNWG0AMupwCrNY0rq\nROVTOOkPyu4F7g9317WLZVtke7G0nS+9qmBr6fKx6zjtE6oRT/t+EFZbYGsMI/bt\nBERoGwxvtjfk/YaKRHA+xleBjNlcfTN8i1GACvu9OHSBFypUtjR1sVe24wKBgQC1\nTd8nRZLNt/j+em8Y90bGp4nZo4vgXiFclJy6ZCER9vEXQXHQYLghdxp+Q3aFRdGl\nYmRjp2Gybe/d0yYR1AeYu6tuWz6Y34+FZOH56KaURRLoxI5JgEo6Ba4+TXuLYZH+\nDTL3pOGfSMDszZMWpVEmP3YKCrkfy5p6vn+PfP4uQQKBgA5UJrpSkqBVIz++FJQL\n8fcd9m/DBy+bhlb1G7Xr+YzONCsx0KdC0jE25H02GlIXQkyc1xY+2eoutCfPVPUJ\n3U4GiOPgyX7vYlvYZFEXQtC1OujY6W6xXa/ShK4jk82Lx0Ees3JjRAtsj72nFh8J\nAbMeKlTH/UDB6/VDSLM2Mi6w\n-----END PRIVATE KEY-----\n",
+  "client_email": "gcs-uploader@myinterviewvideos.iam.gserviceaccount.com",
+  "client_id": "103557058297742301930",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gcs-uploader%40myinterviewvideos.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
