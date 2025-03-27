@@ -16,15 +16,14 @@ from PIL import Image
 import cv2
 import numpy as np
 import mediapipe as mp
+from google.cloud import storage  
 
 app = Flask(__name__, template_folder="templates")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = "super_secret_key"
 app.config["UPLOAD_FOLDER"] = "uploads"
 
-UPLOAD_FOLDER = "uploads/videos"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+GCS_BUCKET_NAME = "interview-uploads"
 
 @app.route("/upload_video", methods=["POST"])
 def upload_video():
@@ -32,26 +31,26 @@ def upload_video():
         return jsonify({"error": "No video file received"}), 400
 
     video_file = request.files["video"]
-    
-    # Create a unique filename using timestamp
+    print("I got the video file.")
     unique_filename = f"interview_{int(time.time())}.webm"
-    video_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
 
     try:
-        video_file.save(video_path)
-        return jsonify({"success": True, "video_url": f"/{video_path}"})
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "myinterviewvideos-be6709664258.json"
+        client = storage.Client()
+        bucket = client.bucket(GCS_BUCKET_NAME)
+        blob = bucket.blob(unique_filename)
+        blob.upload_from_file(video_file, content_type="video/webm")
+
+        print(" Video uploaded to GCS:", blob.public_url)
+        return jsonify({"success": True, "video_url": blob.public_url})
+
     except Exception as e:
+        print("GCS Upload Failed:", str(e))
         return jsonify({"error": str(e)}), 500
-
-
-
-# Ensure the upload folder exists
-if not os.path.exists(app.config["UPLOAD_FOLDER"]):
-    os.makedirs(app.config["UPLOAD_FOLDER"])
 
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Expires in 30 mins
 
-# 🔗 Connect Flask to MongoDB
+#  Connect Flask to MongoDB
 MONGO_URI = "mongodb+srv://123103054:TfUOHuLbpP5aONS6@cluster0.cssez.mongodb.net/interview_ai?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true"
 mongo = pymongo.MongoClient(MONGO_URI)
 db = mongo["interview_ai"]  # Database name
@@ -62,7 +61,7 @@ questions_collection = db["questions"]
 interview_logs = db["interview_logs"]
 sessions_collection = db["sessions"]
 
-# 🔐 API Keys
+# API Keys
 GEMINI_API_KEY = "AIzaSyDIdfe_-YL7NRnSIshidt_ZJIBYIStXKyM"
 SPEECH_KEY = "2IXedd2ndFNphFk2yosIclLJD7ziXm0eMIbjiJrWTyTV91p5kNFUJQQJ99BCACGhslBXJ3w3AAAYACOGM802"
 SPEECH_REGION = "Centralindia"

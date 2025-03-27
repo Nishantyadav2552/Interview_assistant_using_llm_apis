@@ -551,7 +551,7 @@
             border-bottom: 2px solid white;
             z-index: 99;
             font-size: 16px;
-        ">⚠️ Please look straight at the screen</div>
+        ">Please look straight at the screen</div>
     </div>
     <script>
         const videoElement = document.getElementById("camera-feed");
@@ -566,6 +566,34 @@
           const rightEye = landmarks[263];
           const nose = landmarks[1];
       
+            const distToLeftEye = Math.abs(nose.x - leftEye.x);
+            const distToRightEye = Math.abs(nose.x - rightEye.x);
+
+            let turn = "Facing Forward";
+
+            if (distToLeftEye > distToRightEye + 0.03) {
+                turn = "Looking Right";
+            } else if (distToRightEye > distToLeftEye + 0.03) {
+                turn = "Looking Left";
+            }
+
+            const eyeMid = {
+                x: (leftEye.x + rightEye.x) / 2,
+                y: (leftEye.y + rightEye.y) / 2,
+                z: (leftEye.z + rightEye.z) / 2
+            };
+
+            const vector = {
+                x: nose.x - eyeMid.x,
+                y: nose.y - eyeMid.y,
+                z: nose.z - eyeMid.z
+            };
+
+            // Calculate yaw angle in degrees (left/right turn)
+            const yawRadians = Math.atan2(vector.x, -vector.z); // z is inverted in camera space
+            const yawDegrees = yawRadians * (180 / Math.PI);
+
+    
           const dx = rightEye.x - leftEye.x;
           const dy = rightEye.y - leftEye.y;
           const tiltAngle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -586,10 +614,10 @@
       
           prevNoseY = nose.y;
       
-          movementInfo.innerText = `${movement} | ${nod} | Tilt: ${tiltAngle.toFixed(2)}° | Nod: ${nodAngle.toFixed(2)}°`;
+          movementInfo.innerText = `${movement} | ${nod} | Tilt: ${tiltAngle.toFixed(2)}° | Nod: ${nodAngle.toFixed(2)}° | yawDegrees: ${yawDegrees.toFixed(2)}°`;
       
           // Show “Look Straight” message if tilted or nodding
-          if (movement !== "Straight" || nod !== "Straight") {
+          if (turn !== "Facing Forward") {
             showLookStraightMessage();
           } else {
             hideLookStraightMessage();
@@ -962,10 +990,11 @@ async function startInterview() {
             clearInterval(countdownInterval);
             document.getElementById("countdown-container").style.display = "none"; // Hide countdown
             
-            // Start Camera
-            startCamera().then(() => {
-                beginInterview(); // Begin interview only after camera starts
+            startCamera().then(async () => {
+                await startScreenRecording();  // ⬅️ Add this
+                beginInterview();
             });
+
         }
     }, 1000);
 }
@@ -999,6 +1028,7 @@ let recordedChunks = [];
 
 async function startCamera() {
     try {
+        // Only get the camera stream (no audio)
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
 
         const videoElement = document.getElementById("camera-feed");
@@ -1007,10 +1037,7 @@ async function startCamera() {
 
         document.getElementById("camera-container").style.display = "block";
 
-        // Start recording video
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
-        mediaRecorder.start();
+        // ✅ No recording here! Only used for MediaPipe face detection
 
     } catch (error) {
         console.error("Camera access denied:", error);
@@ -1018,13 +1045,68 @@ async function startCamera() {
     }
 }
 
-function stopRecording() {
-    if (mediaRecorder) {
-        mediaRecorder.stop();
-        mediaRecorder.onstop = async () => {
-            const blob = new Blob(recordedChunks, { type: "video/webm" });
+
+let screenRecorder;
+let screenChunks = [];
+
+async function startScreenRecording() {
+    try {
+        // 1. Get screen with system audio (ONLY from tab + share audio)
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true
+        });
+
+        // 2. Get mic separately
+        const micStream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+
+        // 3. Merge mic + system audio using Web Audio API
+        const audioContext = new AudioContext();
+        const destination = audioContext.createMediaStreamDestination();
+
+        const systemSource = audioContext.createMediaStreamSource(screenStream);
+        const micSource = audioContext.createMediaStreamSource(micStream);
+
+        systemSource.connect(destination);
+        micSource.connect(destination);
+
+        // 4. Combine video + mixed audio
+        const combinedStream = new MediaStream([
+            ...screenStream.getVideoTracks(),
+            ...destination.stream.getAudioTracks() // 👈 merged audio
+        ]);
+
+        // 4. Set up recorder
+        screenRecorder = new MediaRecorder(combinedStream);
+        screenChunks = [];
+
+        screenRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                screenChunks.push(event.data);
+            }
+        };
+
+        screenRecorder.start();
+        console.log("✅ Screen + Mic recording started.");
+
+    } catch (err) {
+        console.error("❌ Failed to start screen + mic recording:", err);
+        alert("⚠️ Permission denied or unsupported browser.");
+    }
+}
+
+
+
+function stopScreenRecording() {
+    if (screenRecorder) {
+        screenRecorder.stop();
+
+        screenRecorder.onstop = async () => {
+            const screenBlob = new Blob(screenChunks, { type: "video/webm" });
             const formData = new FormData();
-            formData.append("video", blob, "interview_recording.webm");
+            formData.append("video", screenBlob, "screen_recording.webm");
 
             try {
                 const response = await fetch("/upload_video", {
@@ -1034,16 +1116,17 @@ function stopRecording() {
 
                 const result = await response.json();
                 if (result.success) {
-                    console.log("✅ Video uploaded successfully:", result.video_url);
+                    console.log("✅ Screen recording uploaded:", result.video_url);
                 } else {
-                    console.error("❌ Video upload failed.");
+                    console.error("❌ Upload failed:", result.error);
                 }
             } catch (error) {
-                console.error("❌ Error uploading video:", error);
+                console.error("❌ Upload error:", error);
             }
         };
     }
 }
+
 
 
 
@@ -1059,7 +1142,7 @@ function stopRecording() {
                 document.getElementById("interview-results").style.display = "block"; // Show result
 
                 // Stop Video Recording
-                stopRecording();
+                stopScreenRecording(); 
 
                 // Disable input fields after interview
                 document.getElementById("response").disabled = true;
