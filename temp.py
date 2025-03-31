@@ -35,7 +35,7 @@ def upload_video():
     unique_filename = f"interview_{int(time.time())}.webm"
 
     try:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "myinterviewvideos-be6709664258.json"
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "myinterviewvideos-c8174df6386d.json"
         client = storage.Client()
         bucket = client.bucket(GCS_BUCKET_NAME)
         blob = bucket.blob(unique_filename)
@@ -60,6 +60,7 @@ users_collection = db["users"]
 questions_collection = db["questions"]
 interview_logs = db["interview_logs"]
 sessions_collection = db["sessions"]
+interviews_collection = db["interviews"]
 
 # API Keys
 GEMINI_API_KEY = "AIzaSyDIdfe_-YL7NRnSIshidt_ZJIBYIStXKyM"
@@ -82,6 +83,43 @@ follow_up_remaining = 0
 total_score = 0
 total_questions = 0
 candidate_responses = []
+
+@app.route("/create_interview", methods=["POST"])
+def create_interview():
+    if "user" not in session or session["role"] != "company":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    title = request.form.get("interview_title", "Untitled Interview")
+    interview_id = f"I{random.randint(10000, 99999)}"
+
+    interviews_collection.insert_one({
+        "interview_id": interview_id,
+        "interview_title": title,
+        "company_username": session["user"],
+        "created_at": datetime.utcnow()
+    })
+
+    # ✅ Redirect to the dashboard with interview_id
+    return redirect(url_for("company_dashboard", interview_id=interview_id))
+
+@app.route("/get_company_interviews", methods=["GET"])
+def get_company_interviews():
+    if "user" not in session or session["role"] != "company":
+        return jsonify({"error": "Unauthorized"}), 403
+
+    interviews_collection = db["interviews"]
+    interviews = list(interviews_collection.find(
+        {"company_username": session["user"]},
+        {"_id": 0}
+    ))
+
+    return jsonify({"interviews": interviews})
+
+@app.route("/dashboard_selector")
+def dashboard_selector():
+    if "user" not in session or session["role"] != "company":
+        return redirect(url_for("home"))
+    return render_template("select_interview.html")
 
 @app.route("/get_company_user_id", methods=["GET"])
 def get_company_user_id():
@@ -112,7 +150,7 @@ def home():
             if users[username]["role"] == "candidate":
                 return redirect(url_for("resume_upload"))
             elif users[username]["role"] == "company":
-                return redirect(url_for("company_dashboard"))
+                return redirect(url_for("dashboard_selector"))
         
         return render_template("home.html", error="Invalid credentials")
     
@@ -210,10 +248,10 @@ def get_existing_questions():
         return jsonify({"error": "Unauthorized"}), 403
 
     username = session["user"]
-    user_questions = questions_collection.find_one({"company": username}, {"_id": 0, "questions": 1})
-
-    if user_questions:
-        return jsonify({"questions": user_questions["questions"]})
+    interview_id = session["interview_id"]
+    entry = questions_collection.find_one({"interview_id": interview_id}, {"_id": 0, "questions": 1})
+    if entry:
+        return jsonify({"questions": entry["questions"]})
     else:
         return jsonify({"questions": []})
 
@@ -226,34 +264,34 @@ def save_question():
         return jsonify({"error": "Unauthorized"}), 403
 
     username = session["user"]
+    interview_id = session["interview_id"]
     data = request.get_json()
     question_text = data.get("question", "").strip()
 
     if not question_text:
         return jsonify({"error": "Invalid question!"}), 400
 
-    # ✅ Check if question already exists for this user
-    existing_entry = questions_collection.find_one({"company": username})
-    if existing_entry:
-        if question_text not in existing_entry["questions"]:
-            # ✅ Append the new question to the existing list
+    existing = questions_collection.find_one({"interview_id": interview_id})
+    if existing:
+        if question_text not in existing["questions"]:
             questions_collection.update_one(
-                {"company": username},
+                {"interview_id": interview_id},
                 {"$push": {"questions": question_text}}
             )
     else:
-        # ✅ Create a new entry if the company/user has no questions stored
-        questions_collection.insert_one({"company": username, "questions": [question_text]})
+        questions_collection.insert_one({"interview_id": interview_id, "questions": [question_text]})
 
-    return jsonify({"success": True, "message": "Question saved successfully!"})
+    return jsonify({"success": True})
 
-@app.route("/company_dashboard", methods=["GET"])
-def company_dashboard():
-    """Renders the company dashboard UI"""
+@app.route("/company_dashboard/<interview_id>")
+def company_dashboard(interview_id):
     if "user" not in session or session["role"] != "company":
         return redirect(url_for("home"))
 
-    return render_template("company_dashboard.html")
+    # Store selected interview in session for use in other routes
+    session["interview_id"] = interview_id
+
+    return render_template("company_dashboard.html", interview_id=interview_id)
 
 # 🤖 AI Generates Questions Based on Job Title
 @app.route("/generate_questions", methods=["POST"])
@@ -462,10 +500,9 @@ def get_question():
 
     username = session["user"]
     
-    company_name = session["company_name"]  # ✅ Get stored company name
+    interview_id = session["interview_id"]
+    company_data = questions_collection.find_one({"interview_id": interview_id}, {"_id": 0, "questions": 1})
 
-    # ✅ Fetch questions of the company the candidate entered
-    company_data = questions_collection.find_one({"company": company_name}, {"_id": 0, "questions": 1})
     all_questions = company_data["questions"] if company_data else []
 
     if not all_questions:
@@ -679,44 +716,39 @@ def register():
 
 @app.route("/login_candidate", methods=["POST"])
 def login_candidate():
-    """Handles candidate login and fetches questions based on company-specific user ID"""
+    """Handles candidate login using interview ID"""
     username = request.form["username"]
     password = request.form["password"]
-    company_user_id = request.form["company_user_id"].strip()  # ✅ Get user_id, not name
+    interview_id = request.form["interview_id"].strip()
 
-    # ✅ Find the candidate user in MongoDB
     user = users_collection.find_one({"username": username, "role": "candidate"})
 
-    # ✅ Verify candidate credentials
     if user and bcrypt.checkpw(password.encode("utf-8"), user["password"]):
-        # ✅ Find company by user_id
-        company = users_collection.find_one({"user_id": company_user_id, "role": "company"})
+        interview = interviews_collection.find_one({"interview_id": interview_id})
+        if not interview:
+            return "Invalid Interview ID", 400
 
-        if not company:
-            return "Invalid Company User ID. Please enter a valid one.", 400
+        company_username = interview["company_username"]
 
-        # ✅ Store the company NAME in session instead of user_id
+        # ✅ Store session info
         session["user"] = username
         session["role"] = "candidate"
-        session["company_name"] = company["username"]  # ✅ Store company name instead
+        session["company_name"] = company_username
+        session["interview_id"] = interview_id
 
-        # ✅ Debugging: Print stored session values
-        print("Candidate Logged In:", session)
-
-        # ✅ Store session in MongoDB
         sessions_collection.delete_many({"username": username})
-        session_data = {
+        sessions_collection.insert_one({
             "username": username,
             "role": "candidate",
-            "company_name": company["username"],  # ✅ Store the company name
+            "company_name": company_username,
+            "interview_id": interview_id,
             "ip_address": request.remote_addr,
             "user_agent": request.headers.get("User-Agent"),
             "login_time": datetime.now(timezone.utc),
             "expires_at": datetime.now(timezone.utc) + timedelta(hours=1)
-        }
-        sessions_collection.insert_one(session_data)
+        })
 
-        return redirect(url_for("resume_upload"))  # ✅ Redirect to candidate interview page
+        return redirect(url_for("resume_upload"))
 
     return "Invalid candidate credentials", 400
 
@@ -746,7 +778,7 @@ def login_company():
         }
         sessions_collection.insert_one(session_data)
 
-        return redirect(url_for("company_dashboard"))  # ✅ Redirect to company dashboard
+        return redirect(url_for("dashboard_selector"))  
 
     return "Invalid company credentials", 400
 

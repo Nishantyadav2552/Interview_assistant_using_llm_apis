@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Interview</title>
+</head>
+<body>
+    <h2>Create New Interview</h2>
+    <form method="POST" action="/create_interview">
+        <input type="text" name="interview_title" placeholder="Enter interview title" required>
+        <button type="submit">Create</button>
+    </form>
+
+    <h2>Your Interviews</h2>
+    <ul id="interviewList"></ul>
+
+    <script>
+        fetch("/get_company_interviews")
+            .then(res => res.json())
+            .then(data => {
+                const ul = document.getElementById("interviewList");
+                data.interviews.forEach(intv => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `<a href="/company_dashboard/${intv.interview_id}">
+                        ${intv.interview_title} (${intv.interview_id})
+                    </a>`;
+                    ul.appendChild(li);
+                });
+            });
+    </script>
+</body>
+</html>
