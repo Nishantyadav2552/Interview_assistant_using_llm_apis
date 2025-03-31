@@ -56,11 +56,11 @@ mongo = pymongo.MongoClient(MONGO_URI)
 db = mongo["interview_ai"]  # Database name
 
 # Create Collections (like Tables in SQL)
-users_collection = db["users"]
-questions_collection = db["questions"]
-interview_logs = db["interview_logs"]
-sessions_collection = db["sessions"]
-interviews_collection = db["interviews"]
+company_collection = db["company"]           # name, password, interview_ids[]
+candidate_collection = db["candidate"]       # name, password
+interviews_collection = db["interviews"]     # interview_id, title, questions[], company_name
+sessions_collection = db["session"]          # active sessions
+interview_logs = db["interview_logs"]        # logs, scores etc.
 
 # API Keys
 GEMINI_API_KEY = "AIzaSyDIdfe_-YL7NRnSIshidt_ZJIBYIStXKyM"
@@ -92,14 +92,22 @@ def create_interview():
     title = request.form.get("interview_title", "Untitled Interview")
     interview_id = f"I{random.randint(10000, 99999)}"
 
+    # Ensure interview_ids array is updated (with upsert)
+    company_collection.update_one(
+        {"company_name": session["user"]},
+        {"$push": {"interview_ids": interview_id}},
+        upsert=True
+    )
+
+    # Create the interview entry
     interviews_collection.insert_one({
         "interview_id": interview_id,
         "interview_title": title,
-        "company_username": session["user"],
+        "company_name": session["user"],
+        "questions": [],
         "created_at": datetime.utcnow()
     })
 
-    # ✅ Redirect to the dashboard with interview_id
     return redirect(url_for("company_dashboard", interview_id=interview_id))
 
 @app.route("/get_company_interviews", methods=["GET"])
@@ -107,9 +115,8 @@ def get_company_interviews():
     if "user" not in session or session["role"] != "company":
         return jsonify({"error": "Unauthorized"}), 403
 
-    interviews_collection = db["interviews"]
     interviews = list(interviews_collection.find(
-        {"company_username": session["user"]},
+        {"company_name": session["user"]},  # ✅ updated field
         {"_id": 0}
     ))
 
@@ -127,15 +134,18 @@ def get_company_user_id():
     if "user" not in session or session["role"] != "company":
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
-    
-    # ✅ Fetch user details from MongoDB
-    company_data = users_collection.find_one({"username": username}, {"_id": 0, "user_id": 1})
+    company_name = session["user"]
+
+    # ✅ Fetch company details from the new company_collection
+    company_data = company_collection.find_one(
+        {"company_name": company_name}, {"_id": 0, "user_id": 1}
+    )
 
     if company_data and "user_id" in company_data:
         return jsonify({"user_id": company_data["user_id"]})
     else:
         return jsonify({"error": "User ID not found"}), 404
+
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -143,17 +153,22 @@ def home():
         username = request.form["username"]
         password = request.form["password"]
 
-        if username in users and users[username]["password"] == password:
+        # 🔍 Check if user exists in candidate collection
+        candidate = candidate_collection.find_one({"candidate_name": username})
+        if candidate and bcrypt.checkpw(password.encode("utf-8"), candidate["password"]):
             session["user"] = username
-            session["role"] = users[username]["role"]
+            session["role"] = "candidate"
+            return redirect(url_for("resume_upload"))
 
-            if users[username]["role"] == "candidate":
-                return redirect(url_for("resume_upload"))
-            elif users[username]["role"] == "company":
-                return redirect(url_for("dashboard_selector"))
-        
+        # 🔍 Check if user exists in company collection
+        company = company_collection.find_one({"company_name": username})
+        if company and bcrypt.checkpw(password.encode("utf-8"), company["password"]):
+            session["user"] = username
+            session["role"] = "company"
+            return redirect(url_for("dashboard_selector"))
+
         return render_template("home.html", error="Invalid credentials")
-    
+
     return render_template("home.html")
 
 def extract_text_from_pdf(pdf_path):
@@ -166,23 +181,17 @@ def extract_text_from_pdf(pdf_path):
 
 @app.route("/resume_upload", methods=["GET", "POST"])
 def resume_upload():
-    """Resume upload page before interview starts."""
     if "user" not in session or session["role"] != "candidate":
         return redirect(url_for("home"))
 
-    """Resume upload page before interview starts."""
-    if "user" not in session or session["role"] != "candidate":
-        return redirect(url_for("home"))
-
-    username = session["user"]  # ✅ Define `username` at the beginning
-
+    username = session["user"]
 
     if request.method == "POST":
         job_desc = request.form.get("job_desc", "Software Development Engineer")
         resume = request.files["resume"]
 
         if resume and resume.filename.endswith(".pdf"):
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], session["user"] + "_resume.pdf")
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{username}_resume.pdf")
             resume.save(file_path)
 
             extracted_text = extract_text_from_pdf(file_path)
@@ -206,22 +215,20 @@ def resume_upload():
             except Exception as e:
                 resume_score = "Error"
 
-            # ✅ Store resume score in MongoDB
+            # ✅ Store resume score and text in MongoDB
             interview_logs.update_one(
-                {"username": username},
-                {"$set": {"resume_score": resume_score}},  # Add `resume_score` field
-                upsert=True  # Create document if it doesn't exist
-            )
-
-            interview_logs.update_one(
-                {"username": username},
-                {"$set": {"resume_text": extracted_text}},  # Add `resume_text` field
-                upsert=True  # Create document if it doesn't exist
+                {"candidate_name": username, "interview_id": session["interview_id"]},
+                {
+                    "$set": {
+                        "resume_score": resume_score,
+                        "resume_text": extracted_text
+                    }
+                },
+                upsert=True
             )
 
             print(f"✅ Stored Resume Score for {username}: {resume_score}")
-
-            return redirect(url_for("interview"))  # Proceed to interview
+            return redirect(url_for("interview"))
 
         return "Invalid file format. Please upload a PDF file."
 
@@ -229,41 +236,45 @@ def resume_upload():
 
 @app.route("/interview")
 def interview():
-    """Check session from MongoDB before granting interview access"""
-    if "user" not in session:
+    """Allow candidate to access interview only if session is valid"""
+    if "user" not in session or session.get("role") != "candidate":
         return redirect(url_for("home"))
 
-    # ✅ Fetch session from MongoDB
-    user_session = sessions_collection.find_one({"username": session["user"]})
+    username = session["user"]
 
-    if not user_session or user_session["role"] != "candidate":
+    # ✅ Check for active session in MongoDB
+    user_session = sessions_collection.find_one({"username": username, "role": "candidate"})
+
+    if not user_session:
         return redirect(url_for("home"))
 
     return render_template("temp.html")
 
 @app.route("/get_existing_questions", methods=["GET"])
 def get_existing_questions():
-    """Retrieves stored questions from the database for the logged-in user."""
-    if "user" not in session:
+    """Retrieves stored questions from the interviews collection."""
+    if "user" not in session or "interview_id" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
     interview_id = session["interview_id"]
-    entry = questions_collection.find_one({"interview_id": interview_id}, {"_id": 0, "questions": 1})
-    if entry:
+
+    # ✅ Fetch questions directly from the `interviews` collection
+    entry = interviews_collection.find_one(
+        {"interview_id": interview_id},
+        {"_id": 0, "questions": 1}
+    )
+
+    if entry and "questions" in entry:
         return jsonify({"questions": entry["questions"]})
     else:
         return jsonify({"questions": []})
 
-
-
 @app.route("/save_question", methods=["POST"])
 def save_question():
-    """Saves selected questions to the database."""
-    if "user" not in session:
+    """Saves a new question to the interview's question list in the interviews collection."""
+    if "user" not in session or "interview_id" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
     interview_id = session["interview_id"]
     data = request.get_json()
     question_text = data.get("question", "").strip()
@@ -271,27 +282,39 @@ def save_question():
     if not question_text:
         return jsonify({"error": "Invalid question!"}), 400
 
-    existing = questions_collection.find_one({"interview_id": interview_id})
-    if existing:
-        if question_text not in existing["questions"]:
-            questions_collection.update_one(
+    # ✅ Fetch the interview and check if question already exists
+    interview = interviews_collection.find_one({"interview_id": interview_id})
+    if interview:
+        if question_text not in interview.get("questions", []):
+            interviews_collection.update_one(
                 {"interview_id": interview_id},
                 {"$push": {"questions": question_text}}
             )
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Question already exists!"}), 400
     else:
-        questions_collection.insert_one({"interview_id": interview_id, "questions": [question_text]})
-
-    return jsonify({"success": True})
+        return jsonify({"error": "Interview not found"}), 404
 
 @app.route("/company_dashboard/<interview_id>")
 def company_dashboard(interview_id):
     if "user" not in session or session["role"] != "company":
         return redirect(url_for("home"))
 
-    # Store selected interview in session for use in other routes
+    # ✅ Fetch interview from DB to ensure it exists and belongs to this company
+    interview = interviews_collection.find_one({
+        "interview_id": interview_id,
+        "company_name": session["user"]
+    })
+
+    if not interview:
+        return "Interview not found or unauthorized access", 404
+
+    # ✅ Save to session for later use
     session["interview_id"] = interview_id
 
-    return render_template("company_dashboard.html", interview_id=interview_id)
+    # ✅ Pass interview details to the template
+    return render_template("company_dashboard.html", interview=interview)
 
 # 🤖 AI Generates Questions Based on Job Title
 @app.route("/generate_questions", methods=["POST"])
@@ -323,13 +346,16 @@ def generate_questions():
 # 📌 **Route: Logout**
 @app.route("/logout")
 def logout():
-
     if "user" in session:
-        # ✅ Delete the session from MongoDB
-        sessions_collection.delete_one({"username": session["user"]})
+        # ✅ Delete the user's session from MongoDB
+        sessions_collection.delete_many({"username": session["user"]})  # In case multiple sessions exist
 
+    # ✅ Clear the local Flask session
     session.clear()
+
+    # ✅ Redirect to home
     return redirect(url_for("home"))
+
 
 
 # 🎤 Speech-to-Text (Azure STT)
@@ -356,10 +382,13 @@ def logout():
 # 📊 Evaluate Response
 def evaluate_response():
     """Evaluates the final interview score based on all questions and responses."""
-    username = session["user"]
+    if "user" not in session or session["role"] != "candidate":
+        return jsonify({"error": "Unauthorized"}), 403
 
-    # Retrieve all stored questions and responses
-    logs = interview_logs.find_one({"username": username}, {"_id": 0, "logs": 1})
+    candidate_name = session["user"]
+
+    # ✅ Retrieve all stored logs for the candidate
+    logs = interview_logs.find_one({"candidate_name": candidate_name}, {"_id": 0, "logs": 1})
 
     if not logs or "logs" not in logs:
         return jsonify({"error": "No interview data found"}), 400
@@ -369,10 +398,9 @@ def evaluate_response():
     if not completed_logs:
         return jsonify({"error": "No completed responses available for evaluation"}), 400
 
-    # Format questions & responses for AI evaluation
+    # ✅ Format questions & responses for AI evaluation
     interview_text = "\n".join([f"Q: {log['question']}\nA: {log['response']}" for log in completed_logs])
 
-    # AI Evaluation Prompt
     prompt = f"""Analyze the following interview responses and provide a final score (0-10) :
 
     {interview_text}
@@ -380,27 +408,27 @@ def evaluate_response():
     give a int value only no other text than that.
     """
 
-    ai_response = model.generate_content(prompt)
-
     try:
+        ai_response = model.generate_content(prompt)
         score_text = ai_response.text.strip()
         score = int(score_text)
 
         if 0 <= score <= 10:
             total_score = score
         else:
-            raise ValueError("Invalid AI score")  # Handle invalid numbers
-
+            raise ValueError("Invalid AI score")
     except (ValueError, AttributeError):
-        total_score = 5  # Default score if AI response is unclear
+        total_score = 5  # Fallback score if AI fails
 
-    # Store final score and feedback in database
+    # ✅ Store final score in the logs
     interview_logs.update_one(
-        {"username": username},
-        {"$set": {"final_score": total_score}}
+        {"candidate_name": candidate_name},
+        {"$set": {"final_score": total_score}},
+        upsert=True
     )
 
     return total_score
+
 
 # 🔊 Text-to-Speech (TTS)
 @app.route("/text_to_speech", methods=["POST"])
@@ -448,46 +476,49 @@ def start_interview():
     """Resets all variables and starts a fresh interview."""
     global question_index, follow_up_remaining, total_score, total_questions, candidate_responses
 
-    if "user" not in session:
+    if "user" not in session or session["role"] != "candidate":
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
+    candidate_name = session["user"]
+    interview_id = session.get("interview_id", None)
 
-    # ✅ Ensure `logs` array exists for this user
+    # ✅ Ensure logs array exists for this candidate
     interview_logs.update_one(
-        {"username": username},
-        {"$setOnInsert": {"logs": []}},  # ✅ Creates `logs` array if it does not exist
+        {"candidate_name": candidate_name, "interview_id": interview_id},
+        {"$setOnInsert": {"logs": []}},
         upsert=True
     )
 
-    # ✅ Fetch candidate data from `interview_logs`
-    candidate_data = interview_logs.find_one({"username": username}, {"_id": 0, "resume_score": 1})
+    # ✅ Fetch resume score
+    candidate_data = interview_logs.find_one(
+        {"candidate_name": candidate_name, "interview_id": interview_id},
+        {"_id": 0, "resume_score": 1}
+    )
 
-    if candidate_data and "resume_score" in candidate_data:
-        resume_score = candidate_data["resume_score"]
-    else:
-        resume_score = "Not available"
+    resume_score = candidate_data.get("resume_score", "Not available") if candidate_data else "Not available"
+    print(f"✅ Resume Score for {candidate_name}: {resume_score}")
 
-    print(f"✅ Resume Score for {username}: {resume_score}")
-
-    # ✅ Clear old interview logs for this user
+    # ✅ Clear old logs and store resume score again
     interview_logs.update_one(
-        {"username": username},
-        {"$set": {"logs": [], "resume_score": resume_score}},  # Ensure `resume_score` is included
+        {"candidate_name": candidate_name, "interview_id": interview_id},
+        {"$set": {"logs": [], "resume_score": resume_score}},
         upsert=True
     )
-    
-     # ✅ Store the resume score in session for later retrieval
+
+    # ✅ Store resume score in session
     session["resume_score"] = resume_score
 
+    # Reset global variables
     question_index = 0
     follow_up_remaining = 0
     total_score = 0
     total_questions = 0
     candidate_responses = []
 
+    # Clear file log (if applicable)
     open("interview_log.txt", "w").close()
-    return get_question()  # Immediately send the first question
+
+    return get_question()  # Immediately start the interview
 
 # 🤖 Get Next Question
 @app.route("/get_question", methods=["GET"])
@@ -498,39 +529,42 @@ def get_question():
         print("🔴 ERROR: User session or company_name missing!")
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
-    
+    candidate_name = session["user"]
     interview_id = session["interview_id"]
-    company_data = questions_collection.find_one({"interview_id": interview_id}, {"_id": 0, "questions": 1})
 
-    all_questions = company_data["questions"] if company_data else []
+    # ✅ Fetch all questions for this interview from 'interviews' collection
+    interview_data = interviews_collection.find_one({"interview_id": interview_id}, {"_id": 0, "questions": 1})
+    all_questions = interview_data.get("questions", []) if interview_data else []
 
     if not all_questions:
-        return jsonify({"error": "No questions available for this company!"})
-    
-    # ✅ Select 2 random questions at the start of the interview
+        return jsonify({"error": "No questions available for this interview!"})
+
+    # ✅ Select random questions only once and store in session
     if "selected_questions" not in session:
         session["selected_questions"] = random.sample(all_questions, min(1, len(all_questions)))
 
-    selected_questions = session["selected_questions"]  # Use only these 2 questions
+    selected_questions = session["selected_questions"]
 
-    # If the interview is starting, reset tracking variables
+    # Reset state if starting fresh
     if request.args.get("start") == "true":
         question_index = 0
         follow_up_remaining = 0
         candidate_responses = []
         return jsonify({"question": "Interview started! Here is your first question:", "type": "start"})
 
-    # If interview is over
+    # ✅ If interview is over
     if question_index >= len(selected_questions):
         final_score = evaluate_response()
-        resume_score = session.get("resume_score", "Not available")
-        
-        overall_score = (0.4 * float(resume_score)) + (0.6 * float(final_score))
+        resume_score = session.get("resume_score", "0")
+
+        try:
+            overall_score = (0.4 * float(resume_score)) + (0.6 * float(final_score))
+        except ValueError:
+            overall_score = 5.0
 
         interview_logs.update_one(
-            {"username": username},
-            {"$set": {"overall_score": overall_score}},  # Ensure `resume_score` is included
+            {"candidate_name": candidate_name, "interview_id": interview_id},
+            {"$set": {"overall_score": overall_score}},
             upsert=True
         )
 
@@ -540,20 +574,18 @@ def get_question():
             "resume_score": resume_score,
             "overall_score": overall_score
         })
-    
-       
-    # Select the current question from the list
+
+    # ✅ Main question flow
     current_question = selected_questions[question_index]
 
     if follow_up_remaining == 0:
-        follow_up_remaining = 1  # Set follow-up question count
+        follow_up_remaining = 1
 
         with open("interview_log.txt", "a", encoding="utf-8") as log_file:
             log_file.write(f"Q: {current_question}\n\n")
 
-        # ✅ Store the asked question in MongoDB (without response yet)
         interview_logs.update_one(
-            {"username": username},
+            {"candidate_name": candidate_name, "interview_id": interview_id},
             {
                 "$push": {
                     "logs": {
@@ -563,25 +595,25 @@ def get_question():
                     }
                 }
             },
-            upsert=True  # ✅ Creates a new document if user logs don’t exist
+            upsert=True
         )
 
         return jsonify({"question": current_question, "type": "main"})
 
-    # Generate a contextual follow-up question
+    # ✅ Follow-up question logic
     previous_answers = " ".join(candidate_responses[-1:]) or "No previous responses yet."
     prompt = (
         f"The candidate previously responded: '{previous_answers}'. "
-        f"Ask a natural, engaging one-line follow-up question, avoiding robotic phrasing. Sound more like human is asking. and do not give any other text then question and avoid bold."
+        f"Ask a natural, engaging one-line follow-up question, avoiding robotic phrasing. "
+        f"Sound more like a human is asking. Only return the question."
     )
     follow_up_question = model.generate_content(prompt).text.strip()
 
     with open("interview_log.txt", "a", encoding="utf-8") as log_file:
         log_file.write(f"Q: {follow_up_question}\n\n")
 
-    # ✅ Store the follow-up question in MongoDB
     interview_logs.update_one(
-        {"username": username},
+        {"candidate_name": candidate_name, "interview_id": interview_id},
         {
             "$push": {
                 "logs": {
@@ -594,10 +626,9 @@ def get_question():
         upsert=True
     )
 
-    follow_up_remaining -= 1  # Decrement follow-ups left
-
+    follow_up_remaining -= 1
     if follow_up_remaining == 0:
-        question_index += 1  # Move to the next main question
+        question_index += 1
 
     return jsonify({"question": follow_up_question, "type": "follow-up"})
 
@@ -607,30 +638,39 @@ def submit_response():
     """Stores candidate responses inside the MongoDB user's logs array"""
     global candidate_responses
 
-    if "user" not in session:
+    if "user" not in session or "interview_id" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
+    candidate_name = session["user"]
+    interview_id = session["interview_id"]
     data = request.get_json()
     user_response = data.get("response", "")
 
-    # ✅ Append response to candidate_responses list
+    # ✅ Append response to memory list
     candidate_responses.append(user_response)
 
     with open("interview_log.txt", "a", encoding="utf-8") as log_file:
         log_file.write(f"A: {user_response}\n\n")
 
-    # ✅ Find the latest unanswered question for this user
+    # ✅ Find the latest unanswered question for this candidate & interview
     latest_question = interview_logs.find_one(
-        {"username": username, "logs.response": None},  # Look for the latest unanswered question
-        {"logs.$": 1}  # Retrieve only the first matching log entry
+        {"candidate_name": candidate_name, "interview_id": interview_id, "logs.response": None},
+        {"logs.$": 1}
     )
 
     if latest_question and "logs" in latest_question:
-       # ✅ Update the latest question with the response
+        question_to_update = latest_question["logs"][0]["question"]
+        
+        # ✅ Update the response in logs
         interview_logs.update_one(
-            {"username": username, "logs.question": latest_question["logs"][0]["question"]},
-            {"$set": {"logs.$.response": user_response}}
+            {
+                "candidate_name": candidate_name,
+                "interview_id": interview_id,
+                "logs.question": question_to_update
+            },
+            {
+                "$set": {"logs.$.response": user_response}
+            }
         )
         return jsonify({"success": True, "message": "Response recorded successfully."})
 
@@ -639,13 +679,17 @@ def submit_response():
 @app.route("/get_feedback", methods=["GET"])
 def get_feedback():
     """Retrieves all stored questions & responses for feedback analysis"""
-    if "user" not in session:
+    if "user" not in session or "interview_id" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
+    candidate_name = session["user"]
+    interview_id = session["interview_id"]
 
     # ✅ Fetch the user's interview logs (only completed responses)
-    logs = interview_logs.find_one({"username": username}, {"_id": 0, "logs": 1})
+    logs = interview_logs.find_one(
+        {"candidate_name": candidate_name, "interview_id": interview_id},
+        {"_id": 0, "logs": 1}
+    )
 
     if not logs or "logs" not in logs:
         return jsonify({"error": "No interview data found"}), 400
@@ -661,21 +705,21 @@ def get_feedback():
 
     # ✅ Construct AI prompt for feedback
     prompt = f"""Analyze the following interview and provide feedback:
-    Interview Transcript:
-    {interview_text}
+Interview Transcript:
+{interview_text}
 
-    Please evaluate and provide:
-    - Overall performance
-    - Strengths
-    - Areas for improvement
-    
-    give a score out of 10 based on this -
-    3 marks on how much are these answers related to questions.
-    3 marks for how correct are comunication skills.
-    4 marks for how correct answer technically is.
+Please evaluate and provide:
+- Overall performance
+- Strengths
+- Areas for improvement
 
-    give simple text in this feedback and avoid bold.
-    """
+give a score out of 10 based on this -
+3 marks on how much are these answers related to questions.
+3 marks for how correct are comunication skills.
+4 marks for how correct answer technically is.
+
+give simple text in this feedback and avoid bold.
+"""
 
     # ✅ Generate feedback using AI (Gemini)
     ai_response = model.generate_content(prompt)
@@ -683,11 +727,16 @@ def get_feedback():
     return jsonify({"feedback": ai_response.text.strip()})
 
 def generate_unique_user_id():
-    """Generates a unique 5-digit user ID and ensures it does not already exist in the database."""
+    """Generates a unique 5-digit user ID not present in either company or candidate collections."""
     while True:
-        user_id = str(random.randint(10000, 99999))  # ✅ Generate a random 5-digit number
-        if not users_collection.find_one({"user_id": user_id}):  # ✅ Check uniqueness in DB
-            return user_id  # ✅ Return the unique ID
+        user_id = str(random.randint(10000, 99999))
+
+        # Check in both collections for uniqueness
+        exists_in_company = company_collection.find_one({"user_id": user_id})
+        exists_in_candidate = candidate_collection.find_one({"user_id": user_id})
+
+        if not exists_in_company and not exists_in_candidate:
+            return user_id  # ✅ Return only if unique across both
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -696,52 +745,85 @@ def register():
     new_password = request.form["new_password"]
     role = request.form["role"]
 
-    if users_collection.find_one({"username": new_username}):
-        return "Username already exists!", 400
-
-    # Generate a unique user ID
-    user_id = generate_unique_user_id()  # Generates a unique identifier
-
-    # Hash password for security
+    # Hash password
     hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt())
+    user_id = generate_unique_user_id()
 
-    # Insert user into the database
-    users_collection.insert_one({
-        "user_id": user_id,  # Store the generated unique ID
-        "username": new_username,
-        "password": hashed_password,
-        "role": role
-    })
+    if role == "company":
+        if company_collection.find_one({"company_name": new_username}):
+            return "Company already exists!", 400
+        company_collection.insert_one({
+            "company_name": new_username,
+            "password": hashed_password,
+            "interview_ids": [],
+            "user_id": user_id
+        })
+
+    elif role == "candidate":
+        if candidate_collection.find_one({"candidate_name": new_username}):
+            return "Candidate already exists!", 400
+        candidate_collection.insert_one({
+            "candidate_name": new_username,
+            "password": hashed_password,
+            "user_id": user_id
+        })
+
     return redirect(url_for("home"))
+
 
 @app.route("/login_candidate", methods=["POST"])
 def login_candidate():
-    """Handles candidate login using interview ID"""
+    """Handles candidate login only (interview ID comes later on dashboard)"""
     username = request.form["username"]
     password = request.form["password"]
-    interview_id = request.form["interview_id"].strip()
 
-    user = users_collection.find_one({"username": username, "role": "candidate"})
+    # ✅ Check candidate exists
+    user = candidate_collection.find_one({"candidate_name": username})
 
     if user and bcrypt.checkpw(password.encode("utf-8"), user["password"]):
-        interview = interviews_collection.find_one({"interview_id": interview_id})
-        if not interview:
-            return "Invalid Interview ID", 400
-
-        company_username = interview["company_username"]
-
-        # ✅ Store session info
+        # ✅ Set basic session info (interview comes later)
         session["user"] = username
         session["role"] = "candidate"
-        session["company_name"] = company_username
-        session["interview_id"] = interview_id
 
+        # ✅ Save session in MongoDB
         sessions_collection.delete_many({"username": username})
         sessions_collection.insert_one({
             "username": username,
             "role": "candidate",
-            "company_name": company_username,
+            "ip_address": request.remote_addr,
+            "user_agent": request.headers.get("User-Agent"),
+            "login_time": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=1)
+        })
+
+        return redirect(url_for("candidate_dashboard"))  # 👈 Redirect to new dashboard
+
+    return "Invalid candidate credentials", 400
+
+@app.route("/candidate_dashboard", methods=["GET", "POST"])
+def candidate_dashboard():
+    if "user" not in session or session["role"] != "candidate":
+        return redirect(url_for("home"))
+
+    candidate_name = session["user"]
+
+    if request.method == "POST":
+        interview_id = request.form.get("interview_id", "").strip()
+        interview = interviews_collection.find_one({"interview_id": interview_id})
+        if not interview:
+            return render_template("candidate_dashboard.html", error="Invalid Interview ID", interviews=[])
+
+        company_name = interview["company_name"]
+        session["interview_id"] = interview_id
+        session["company_name"] = company_name
+
+        # Store session in DB
+        sessions_collection.delete_many({"username": candidate_name})
+        sessions_collection.insert_one({
+            "username": candidate_name,
+            "role": "candidate",
             "interview_id": interview_id,
+            "company_name": company_name,
             "ip_address": request.remote_addr,
             "user_agent": request.headers.get("User-Agent"),
             "login_time": datetime.now(timezone.utc),
@@ -750,7 +832,13 @@ def login_candidate():
 
         return redirect(url_for("resume_upload"))
 
-    return "Invalid candidate credentials", 400
+    # ✅ Fetch past interviews from logs
+    past_interviews = list(interview_logs.find(
+        {"candidate_name": candidate_name},
+        {"_id": 0, "interview_id": 1, "resume_score": 1, "final_score": 1, "overall_score": 1}
+    ))
+
+    return render_template("candidate_dashboard.html", interviews=past_interviews)
 
 @app.route("/login_company", methods=["POST"])
 def login_company():
@@ -758,8 +846,7 @@ def login_company():
     username = request.form["username"]
     password = request.form["password"]
 
-    # ✅ Find the company user in MongoDB
-    user = users_collection.find_one({"username": username, "role": "company"})
+    user = company_collection.find_one({"company_name": username})
 
     # ✅ Verify password using bcrypt
     if user and bcrypt.checkpw(password.encode("utf-8"), user["password"]):
@@ -784,43 +871,66 @@ def login_company():
 
 @app.route("/active_sessions")
 def active_sessions():
-    """Returns a list of active user sessions from MongoDB"""
-    # ✅ Auto-remove expired sessions
+    """Returns a list of active user sessions from MongoDB with role-based user info"""
+    # ✅ Remove expired sessions
     sessions_collection.delete_many({"expires_at": {"$lt": datetime.utcnow()}})
 
-    # ✅ Fetch active sessions
-    active_users = list(sessions_collection.find({}, {"_id": 0}))
-    return jsonify(active_users)
+    active_sessions = list(sessions_collection.find({}, {"_id": 0}))
+    
+    # ✅ Enrich sessions with user_id (if needed)
+    enriched_sessions = []
+    for session_data in active_sessions:
+        role = session_data.get("role")
+        username = session_data.get("username")
+        if role == "candidate":
+            user_info = candidate_collection.find_one({"candidate_name": username}, {"_id": 0, "user_id": 1})
+        elif role == "company":
+            user_info = company_collection.find_one({"company_name": username}, {"_id": 0, "user_id": 1})
+        else:
+            user_info = {}
+
+        session_data["user_id"] = user_info.get("user_id") if user_info else None
+        enriched_sessions.append(session_data)
+
+    return jsonify(enriched_sessions)
 
 @app.route("/get_interview_logs", methods=["GET"])
 def get_interview_logs():
-    """Retrieves all stored questions & responses for the logged-in user"""
-    if "user" not in session:
+    """Retrieves all stored questions & responses for the logged-in candidate"""
+    if "user" not in session or session["role"] != "candidate":
         return jsonify({"error": "Unauthorized"}), 403
 
-    username = session["user"]
+    candidate_name = session["user"]
+    interview_id = session.get("interview_id")
 
-    # ✅ Fetch the user's interview logs
-    logs = interview_logs.find_one({"username": username}, {"_id": 0, "logs": 1})
+    # ✅ Fetch the logs for this candidate and specific interview
+    logs = interview_logs.find_one(
+        {"candidate_name": candidate_name, "interview_id": interview_id},
+        {"_id": 0, "logs": 1}
+    )
 
-    if not logs:
-        return jsonify({"logs": []})  # Return empty logs if none exist
+    if not logs or "logs" not in logs:
+        return jsonify({"logs": []})
 
     return jsonify({"logs": logs["logs"]})
 
 @app.route("/delete_question", methods=["POST"])
 def delete_question():
-    """Deletes a question from the company's question list."""
+    """Deletes a question from the interview's question list."""
+    if "interview_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    interview_id = session["interview_id"]
     data = request.get_json()
-    question_text = data.get("question", "")
+    question_text = data.get("question", "").strip()
 
     if not question_text:
         return jsonify({"error": "Invalid question!"}), 400
 
-    # ✅ Remove the question from the company's array
-    result = questions_collection.update_one(
-        {"company": session["user"]},  # Identify the company
-        {"$pull": {"questions": question_text}}  # Remove only this question
+    # ✅ Remove the question from the interview's questions array
+    result = interviews_collection.update_one(
+        {"interview_id": interview_id},
+        {"$pull": {"questions": question_text}}
     )
 
     if result.modified_count > 0:

@@ -1,0 +1,35 @@
+<h2>Welcome, {{ session.user }}!</h2>
+
+<h3>Start New Interview</h3>
+<form method="POST">
+    <label for="interview_id">Enter Interview ID:</label>
+    <input type="text" name="interview_id" required>
+    <button type="submit">Start Interview</button>
+</form>
+
+{% if error %}
+    <p style="color:red">{{ error }}</p>
+{% endif %}
+
+{% if interviews %}
+    <hr>
+    <h3>Your Past Interviews</h3>
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Interview ID</th>
+            <th>Resume Score</th>
+            <th>Interview Score</th>
+            <th>Overall Score</th>
+        </tr>
+        {% for interview in interviews %}
+        <tr>
+            <td>{{ interview.interview_id }}</td>
+            <td>{{ interview.resume_score or 'N/A' }}</td>
+            <td>{{ interview.final_score or 'N/A' }}</td>
+            <td>{{ interview.overall_score or 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>No previous interviews found.</p>
+{% endif %}

@@ -1,8 +1,8 @@
-Q: Explain the role of soil pH in nutrient availability for plants and how you would adjust it in a farming scenario.
+Q: What are the advantages and disadvantages of using different activation functions (Sigmoid, ReLU, Tanh) in a neural network?
 
-A: no I will not
+A: I do not know
 
-Q: Okay, but could you tell me a bit more about why not?
+Q: Is there anything I can do to help you find that out?
 
-A: I will
+A: I do not know
 
